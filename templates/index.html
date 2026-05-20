@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Libreria Eliz</title>
+    <style>
+        :root {
+            --bg-start: #f6efe4;
+            --bg-end: #d8e9ff;
+            --panel: #ffffff;
+            --panel-soft: #f8fbff;
+            --text: #1f2937;
+            --muted: #6b7280;
+            --border: #dbe4f0;
+            --blue: #2563eb;
+            --green: #16a34a;
+            --red: #dc2626;
+            --warning-soft: #fff4d6;
+            --edit-soft: #e8f1ff;
+            --shadow: 0 18px 45px rgba(15, 23, 42, 0.12);
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            font-family: Arial, sans-serif;
+            color: var(--text);
+            background: linear-gradient(135deg, var(--bg-start), var(--bg-end));
+        }
+
+        .page {
+            width: min(1180px, calc(100% - 32px));
+            margin: 0 auto;
+            padding: 32px 0 48px;
+        }
+
+        .hero {
+            text-align: center;
+            margin-bottom: 24px;
+        }
+
+        .hero h1 {
+            margin: 0;
+            font-size: 42px;
+        }
+
+        .hero p {
+            margin: 8px 0 0;
+            color: var(--muted);
+            font-size: 18px;
+        }
+
+        .panel {
+            background: var(--panel);
+            border: 1px solid rgba(255, 255, 255, 0.65);
+            border-radius: 18px;
+            box-shadow: var(--shadow);
+            padding: 24px;
+            margin-bottom: 22px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 14px;
+        }
+
+        .stat-card {
+            background: var(--panel-soft);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 16px;
+        }
+
+        .stat-card strong {
+            display: block;
+            margin-bottom: 6px;
+            color: var(--muted);
+            font-size: 14px;
+        }
+
+        .stat-card span {
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        .section-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+        }
+
+        h2 {
+            margin: 0;
+            font-size: 24px;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 12px;
+            align-items: end;
+        }
+
+        .upload-form {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            flex-wrap: wrap;
+            margin-top: 16px;
+        }
+
+        .upload-form input[type="file"] {
+            max-width: 320px;
+            background: var(--panel-soft);
+        }
+
+        input {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            background: #ffffff;
+            font-size: 14px;
+        }
+
+        .search-input {
+            max-width: 340px;
+        }
+
+        .top-actions {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .reset-form {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .reset-form label {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+            color: var(--muted);
+            font-size: 14px;
+        }
+
+        .reset-form input[type="checkbox"] {
+            width: auto;
+            margin: 0;
+        }
+
+        .button {
+            border: none;
+            border-radius: 10px;
+            padding: 10px 14px;
+            color: #ffffff;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .button:hover {
+            opacity: 0.92;
+        }
+
+        .button:disabled {
+            opacity: 0.55;
+            cursor: not-allowed;
+        }
+
+        .button-primary {
+            background: var(--blue);
+        }
+
+        .button-success {
+            background: var(--green);
+        }
+
+        .button-danger {
+            background: var(--red);
+        }
+
+        .button-neutral {
+            background: #475569;
+        }
+
+        .table-wrap {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th,
+        td {
+            padding: 14px 12px;
+            border-bottom: 1px solid var(--border);
+            text-align: left;
+            vertical-align: middle;
+        }
+
+        th {
+            color: var(--muted);
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        .product-name {
+            font-weight: bold;
+        }
+
+        .product-detail {
+            color: var(--muted);
+            font-size: 13px;
+        }
+
+        .stock-low {
+            color: var(--red);
+            font-weight: bold;
+        }
+
+        .stock-low-cell {
+            background: var(--warning-soft);
+            border-radius: 10px;
+        }
+
+        .edit-row {
+            background: var(--edit-soft);
+        }
+
+        .empty {
+            margin: 0;
+            text-align: center;
+            color: var(--muted);
+        }
+
+        .cell-view,
+        .cell-edit {
+            display: block;
+        }
+
+        .cell-edit {
+            display: none;
+        }
+
+        .editing .cell-view {
+            display: none;
+        }
+
+        .editing .cell-edit {
+            display: block;
+        }
+
+        .inline-actions,
+        .edit-actions {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .edit-input-group {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+            gap: 8px;
+        }
+
+        .edit-input-group input {
+            min-width: 0;
+        }
+
+        .hidden-submit {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="page">
+        <div class="hero">
+            <h1>Libreria Eliz</h1>
+            <p>Gestion simple de stock, ventas y ganancias</p>
+        </div>
+
+        <div class="panel">
+            <div class="section-head">
+                <h2>Resumen del dia</h2>
+                <div class="top-actions">
+                    <form action="{{ url_for('undo_last_sale') }}" method="post" onsubmit="return confirm('¿Deshacer la ultima venta realizada?');">
+                        <button type="submit" class="button button-neutral">Deshacer ultima venta</button>
+                    </form>
+                    <form action="{{ url_for('reset_data') }}" method="post" class="reset-form" onsubmit="return confirm('¿Reiniciar ventas y, si esta marcado, tambien los productos?');">
+                        <label>
+                            <input type="checkbox" name="delete_products" value="yes">
+                            Borrar productos tambien
+                        </label>
+                        <button type="submit" class="button button-danger">Reiniciar datos</button>
+                    </form>
+                </div>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <strong>Total vendido hoy</strong>
+                    <span>${{ "%.2f"|format(today_stats.total_vendido) }}</span>
+                </div>
+                <div class="stat-card">
+                    <strong>Costo total hoy</strong>
+                    <span>${{ "%.2f"|format(today_stats.costo_total) }}</span>
+                </div>
+                <div class="stat-card">
+                    <strong>Ganancia hoy</strong>
+                    <span>${{ "%.2f"|format(today_stats.ganancia_total) }}</span>
+                </div>
+                <div class="stat-card">
+                    <strong>Total invertido</strong>
+                    <span>${{ "%.2f"|format(total_invested) }}</span>
+                </div>
+                <div class="stat-card">
+                    <strong>Mejor dia</strong>
+                    <span>
+                        {% if best_day %}
+                            {{ best_day.fecha }}
+                        {% else %}
+                            Sin ventas
+                        {% endif %}
+                    </span>
+                </div>
+                <div class="stat-card">
+                    <strong>Peor dia</strong>
+                    <span>
+                        {% if worst_day %}
+                            {{ worst_day.fecha }}
+                        {% else %}
+                            Sin ventas
+                        {% endif %}
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <div class="panel">
+            <div class="section-head">
+                <h2>Agregar producto</h2>
+            </div>
+            <form action="{{ url_for('add_book') }}" method="post" class="form-grid">
+                <input type="text" name="title" placeholder="Producto" required>
+                <input type="text" name="author" placeholder="Detalle" required>
+                <input type="number" name="price" placeholder="Precio" step="0.01" min="0" required>
+                <input type="number" name="cost" placeholder="Costo" step="0.01" min="0" required>
+                <input type="number" name="stock" placeholder="Cantidad en stock" min="0" required>
+                <button type="submit" class="button button-primary">Agregar</button>
+            </form>
+            <form action="{{ url_for('upload_excel') }}" method="post" enctype="multipart/form-data" class="upload-form">
+                <input type="file" name="excel_file" accept=".xlsx" required>
+                <button type="submit" class="button button-primary">Cargar Excel</button>
+            </form>
+        </div>
+
+        <div class="panel">
+            <div class="section-head">
+                <h2>Lista de productos</h2>
+                <input
+                    type="text"
+                    id="product-search"
+                    class="search-input"
+                    placeholder="Buscar producto por nombre"
+                >
+            </div>
+
+            {% if products %}
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Producto</th>
+                                <th>Precio</th>
+                                <th>Costo</th>
+                                <th>Stock</th>
+                                <th>Acciones</th>
+                                <th>Venta</th>
+                                <th>Eliminar</th>
+                            </tr>
+                        </thead>
+                        <tbody id="products-table-body">
+                            {% for product in products %}
+                                <tr data-product-name="{{ product.title|lower }}" data-product-row>
+                                    <td>
+                                        <form action="{{ url_for('update_product', book_id=product.id) }}" method="post" id="edit-form-{{ product.id }}"></form>
+                                        <div class="cell-view">
+                                            <div class="product-name">{{ product.title }}</div>
+                                            <div class="product-detail">{{ product.author }}</div>
+                                        </div>
+                                        <div class="cell-edit">
+                                            <div class="edit-input-group">
+                                                <input type="text" name="title" value="{{ product.title }}" form="edit-form-{{ product.id }}" required>
+                                                <input type="text" name="author" value="{{ product.author }}" form="edit-form-{{ product.id }}" required>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="cell-view">${{ "%.2f"|format(product.price) }}</div>
+                                        <div class="cell-edit">
+                                            <input type="number" name="price" value="{{ product.price }}" step="0.01" min="0" form="edit-form-{{ product.id }}" required>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="cell-view">${{ "%.2f"|format(product.cost) }}</div>
+                                        <div class="cell-edit">
+                                            <input type="number" name="cost" value="{{ product.cost }}" step="0.01" min="0" form="edit-form-{{ product.id }}" required>
+                                        </div>
+                                    </td>
+                                    <td class="{% if product.stock <= 2 %}stock-low-cell{% endif %}">
+                                        <div class="cell-view {% if product.stock <= 2 %}stock-low{% endif %}">{{ product.stock }}</div>
+                                        <div class="cell-edit">
+                                            <input type="number" name="stock" value="{{ product.stock }}" min="0" form="edit-form-{{ product.id }}" required>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="inline-actions cell-view">
+                                            <button type="button" class="button button-primary" data-edit-button>Editar</button>
+                                        </div>
+                                        <div class="edit-actions cell-edit">
+                                            <button type="submit" class="button button-success" form="edit-form-{{ product.id }}">Guardar</button>
+                                            <button type="button" class="button button-neutral" data-cancel-button>Cancelar</button>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <form action="{{ url_for('sell_book', book_id=product.id) }}" method="post">
+                                            <button type="submit" class="button button-success" {% if product.stock == 0 %}disabled{% endif %}>Vender 1</button>
+                                        </form>
+                                    </td>
+                                    <td>
+                                        <form action="{{ url_for('delete_product', book_id=product.id) }}" method="post" onsubmit="return confirm('¿Eliminar este producto?');">
+                                            <button type="submit" class="button button-danger">X</button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <p class="empty">No hay productos cargados todavia.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <script>
+        const searchInput = document.getElementById("product-search");
+        const productRows = document.querySelectorAll("#products-table-body tr[data-product-row]");
+        const editButtons = document.querySelectorAll("[data-edit-button]");
+        const cancelButtons = document.querySelectorAll("[data-cancel-button]");
+
+        if (searchInput) {
+            searchInput.addEventListener("input", function () {
+                const searchValue = searchInput.value.toLowerCase().trim();
+
+                productRows.forEach(function (row) {
+                    const productName = row.dataset.productName || "";
+                    const matches = productName.includes(searchValue);
+                    row.style.display = matches ? "" : "none";
+                });
+            });
+        }
+
+        editButtons.forEach(function (button) {
+            button.addEventListener("click", function () {
+                const row = button.closest("tr");
+                row.classList.add("editing", "edit-row");
+            });
+        });
+
+        cancelButtons.forEach(function (button) {
+            button.addEventListener("click", function () {
+                const row = button.closest("tr");
+                const form = row.querySelector("form[id^='edit-form-']");
+
+                if (form) {
+                    form.reset();
+                }
+
+                row.classList.remove("editing", "edit-row");
+            });
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,112 @@
+[
+  {
+    "product_id": 43,
+    "producto": "Plastilina",
+    "cantidad": 1,
+    "precioUnitario": 400.0,
+    "costoUnitario": 200.0,
+    "totalVenta": 400.0,
+    "costoTotal": 200.0,
+    "ganancia": 200.0,
+    "fecha": "2026-05-05"
+  },
+  {
+    "product_id": 43,
+    "producto": "Plastilina",
+    "cantidad": 1,
+    "precioUnitario": 400.0,
+    "costoUnitario": 200.0,
+    "totalVenta": 400.0,
+    "costoTotal": 200.0,
+    "ganancia": 200.0,
+    "fecha": "2026-05-05"
+  },
+  {
+    "product_id": 43,
+    "producto": "Plastilina",
+    "cantidad": 1,
+    "precioUnitario": 400.0,
+    "costoUnitario": 200.0,
+    "totalVenta": 400.0,
+    "costoTotal": 200.0,
+    "ganancia": 200.0,
+    "fecha": "2026-05-05"
+  },
+  {
+    "product_id": 43,
+    "producto": "Plastilina",
+    "cantidad": 1,
+    "precioUnitario": 400.0,
+    "costoUnitario": 200.0,
+    "totalVenta": 400.0,
+    "costoTotal": 200.0,
+    "ganancia": 200.0,
+    "fecha": "2026-05-05"
+  },
+  {
+    "product_id": 72,
+    "producto": "ojalillos",
+    "cantidad": 1,
+    "precioUnitario": 200.0,
+    "costoUnitario": 100.0,
+    "totalVenta": 200.0,
+    "costoTotal": 100.0,
+    "ganancia": 100.0,
+    "fecha": "2026-05-05"
+  },
+  {
+    "product_id": 5,
+    "producto": "Adhesivo Vinilico",
+    "cantidad": 1,
+    "precioUnitario": 900.0,
+    "costoUnitario": 450.0,
+    "totalVenta": 900.0,
+    "costoTotal": 450.0,
+    "ganancia": 450.0,
+    "fecha": "2026-05-08"
+  },
+  {
+    "product_id": 7,
+    "producto": "Adhesivo filgo",
+    "cantidad": 1,
+    "precioUnitario": 600.0,
+    "costoUnitario": 300.0,
+    "totalVenta": 600.0,
+    "costoTotal": 300.0,
+    "ganancia": 300.0,
+    "fecha": "2026-05-08"
+  },
+  {
+    "product_id": 73,
+    "producto": "Block cansoón",
+    "cantidad": 1,
+    "precioUnitario": 1000.0,
+    "costoUnitario": 500.0,
+    "totalVenta": 1000.0,
+    "costoTotal": 500.0,
+    "ganancia": 500.0,
+    "fecha": "2026-05-08"
+  },
+  {
+    "product_id": 74,
+    "producto": "Tarjetas U 30",
+    "cantidad": 1,
+    "precioUnitario": 4000.0,
+    "costoUnitario": 1000.0,
+    "totalVenta": 4000.0,
+    "costoTotal": 1000.0,
+    "ganancia": 3000.0,
+    "fecha": "2026-05-08"
+  },
+  {
+    "product_id": 8,
+    "producto": "Afiler",
+    "cantidad": 1,
+    "precioUnitario": 1200.0,
+    "costoUnitario": 600.0,
+    "totalVenta": 1200.0,
+    "costoTotal": 600.0,
+    "ganancia": 600.0,
+    "fecha": "2026-05-08"
+  }
+]

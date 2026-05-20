@@ -1,0 +1,610 @@
+[
+  {
+    "id": 1,
+    "title": "Abrochadora",
+    "author": "Maped N°10",
+    "price": 6400.0,
+    "cost": 3200.0,
+    "stock": 2
+  },
+  {
+    "id": 2,
+    "title": "Acuarelas",
+    "author": "Estuche acrilico x12",
+    "price": 2800.0,
+    "cost": 1400.0,
+    "stock": 2
+  },
+  {
+    "id": 3,
+    "title": "Acuarelas",
+    "author": "x12 en bolsa",
+    "price": 2000.0,
+    "cost": 1000.0,
+    "stock": 3
+  },
+  {
+    "id": 4,
+    "title": "Adhesivo Filgo",
+    "author": "x50 ml. Goma",
+    "price": 1300.0,
+    "cost": 600.0,
+    "stock": 1
+  },
+  {
+    "id": 5,
+    "title": "Adhesivo Vinilico",
+    "author": "30g. Model",
+    "price": 900.0,
+    "cost": 450.0,
+    "stock": 2
+  },
+  {
+    "id": 6,
+    "title": "Adhesivo Vinilico",
+    "author": "Sta. 100gr.",
+    "price": 1600.0,
+    "cost": 700.0,
+    "stock": 4
+  },
+  {
+    "id": 7,
+    "title": "Adhesivo filgo",
+    "author": "en barra",
+    "price": 600.0,
+    "cost": 300.0,
+    "stock": 4
+  },
+  {
+    "id": 8,
+    "title": "Afiler",
+    "author": "Sifap",
+    "price": 1200.0,
+    "cost": 600.0,
+    "stock": 49
+  },
+  {
+    "id": 9,
+    "title": "Aprieta Papel",
+    "author": "sifap 120 mm.",
+    "price": 3000.0,
+    "cost": 1500.0,
+    "stock": 6
+  },
+  {
+    "id": 10,
+    "title": "Aros metalicos",
+    "author": "50 mm. SIFAP",
+    "price": 500.0,
+    "cost": 200.0,
+    "stock": 20
+  },
+  {
+    "id": 11,
+    "title": "Bandas elasticas",
+    "author": "SIFAP",
+    "price": 500.0,
+    "cost": 100.0,
+    "stock": 5
+  },
+  {
+    "id": 12,
+    "title": "Barras de silicona",
+    "author": "chicas Barrera",
+    "price": 300.0,
+    "cost": 150.0,
+    "stock": 26
+  },
+  {
+    "id": 13,
+    "title": "Block A5",
+    "author": "C/Espiral 80H rayado",
+    "price": 9000.0,
+    "cost": 4500.0,
+    "stock": 1
+  },
+  {
+    "id": 14,
+    "title": "Block A5",
+    "author": "C/Espiral 80H liso",
+    "price": 4000.0,
+    "cost": 2000.0,
+    "stock": 4
+  },
+  {
+    "id": 15,
+    "title": "Block AVON",
+    "author": "A4-80H-RAYADO",
+    "price": 5300.0,
+    "cost": 2600.0,
+    "stock": 4
+  },
+  {
+    "id": 16,
+    "title": "Block America",
+    "author": "A4-80H-Cuadriculado",
+    "price": 5500.0,
+    "cost": 2600.0,
+    "stock": 2
+  },
+  {
+    "id": 17,
+    "title": "Boligrafo",
+    "author": "Katana gel fluo",
+    "price": 600.0,
+    "cost": 300.0,
+    "stock": 32
+  },
+  {
+    "id": 18,
+    "title": "Boligrafo",
+    "author": "Borrax roller gel negro",
+    "price": 2000.0,
+    "cost": 1000.0,
+    "stock": 8
+  },
+  {
+    "id": 19,
+    "title": "Boligrafo",
+    "author": "Pointec colores",
+    "price": 1000.0,
+    "cost": 500.0,
+    "stock": 9
+  },
+  {
+    "id": 20,
+    "title": "Boligrafo",
+    "author": "Filgo brillantes",
+    "price": 400.0,
+    "cost": 200.0,
+    "stock": 5
+  },
+  {
+    "id": 21,
+    "title": "Borratinta",
+    "author": "Jet Killer azul",
+    "price": 1600.0,
+    "cost": 800.0,
+    "stock": 4
+  },
+  {
+    "id": 22,
+    "title": "Brillantina",
+    "author": "Sifap",
+    "price": 3500.0,
+    "cost": 1700.0,
+    "stock": 1
+  },
+  {
+    "id": 23,
+    "title": "Broches",
+    "author": "MIT 10x1000",
+    "price": 1800.0,
+    "cost": 900.0,
+    "stock": 10
+  },
+  {
+    "id": 24,
+    "title": "Calculadora Cientifica",
+    "author": "Ecal TC-82MS",
+    "price": 15000.0,
+    "cost": 7000.0,
+    "stock": 2
+  },
+  {
+    "id": 25,
+    "title": "Carpeta",
+    "author": "Oficio marron",
+    "price": 1600.0,
+    "cost": 800.0,
+    "stock": 3
+  },
+  {
+    "id": 26,
+    "title": "Cartulina",
+    "author": "General",
+    "price": 802.0,
+    "cost": 400.0,
+    "stock": 48
+  },
+  {
+    "id": 27,
+    "title": "Cinta",
+    "author": "Argentina 12mm",
+    "price": 500.0,
+    "cost": 250.0,
+    "stock": 10
+  },
+  {
+    "id": 28,
+    "title": "Cinta",
+    "author": "Papel 12mm STIKO",
+    "price": 2100.0,
+    "cost": 1000.0,
+    "stock": 5
+  },
+  {
+    "id": 29,
+    "title": "Cinta",
+    "author": "Argentina 25mm",
+    "price": 800.0,
+    "cost": 400.0,
+    "stock": 10
+  },
+  {
+    "id": 30,
+    "title": "Cinta",
+    "author": "Transparente embalaje",
+    "price": 2800.0,
+    "cost": 1400.0,
+    "stock": 4
+  },
+  {
+    "id": 31,
+    "title": "Cinta adhesiva",
+    "author": "90m",
+    "price": 1500.0,
+    "cost": 750.0,
+    "stock": 6
+  },
+  {
+    "id": 32,
+    "title": "Corrector Liquido",
+    "author": "Filgo",
+    "price": 1000.0,
+    "cost": 500.0,
+    "stock": 10
+  },
+  {
+    "id": 33,
+    "title": "Crayones",
+    "author": "Filgo x6",
+    "price": 1000.0,
+    "cost": 500.0,
+    "stock": 3
+  },
+  {
+    "id": 34,
+    "title": "Crayones",
+    "author": "Filgo x12",
+    "price": 4500.0,
+    "cost": 2200.0,
+    "stock": 1
+  },
+  {
+    "id": 35,
+    "title": "Cuaderno 84h",
+    "author": "Gloria cuadriculado tb",
+    "price": 4700.0,
+    "cost": 2300.0,
+    "stock": 2
+  },
+  {
+    "id": 36,
+    "title": "Cuaderno 84h",
+    "author": "Gloria rayado tb",
+    "price": 8000.0,
+    "cost": 4000.0,
+    "stock": 2
+  },
+  {
+    "id": 37,
+    "title": "Lapicera Bic",
+    "author": "Fino trazo",
+    "price": 1000.0,
+    "cost": 500.0,
+    "stock": 60
+  },
+  {
+    "id": 38,
+    "title": "Lapicera Bic",
+    "author": "Grueso trazo",
+    "price": 1000.0,
+    "cost": 500.0,
+    "stock": 70
+  },
+  {
+    "id": 39,
+    "title": "Lapiz negro",
+    "author": "Bic Evolution",
+    "price": 500.0,
+    "cost": 250.0,
+    "stock": 29
+  },
+  {
+    "id": 40,
+    "title": "Marcador Permanente",
+    "author": "Filgo negro",
+    "price": 2000.0,
+    "cost": 1000.0,
+    "stock": 4
+  },
+  {
+    "id": 41,
+    "title": "Microfibra",
+    "author": "Filgo",
+    "price": 800.0,
+    "cost": 400.0,
+    "stock": 15
+  },
+  {
+    "id": 42,
+    "title": "Notas adhesivas",
+    "author": "Stick up",
+    "price": 4600.0,
+    "cost": 2300.0,
+    "stock": 6
+  },
+  {
+    "id": 43,
+    "title": "Plastilina",
+    "author": "PLAY COLOR",
+    "price": 400.0,
+    "cost": 200.0,
+    "stock": 23
+  },
+  {
+    "id": 44,
+    "title": "Regla",
+    "author": "Flexible 20cm",
+    "price": 2000.0,
+    "cost": 1000.0,
+    "stock": 2
+  },
+  {
+    "id": 45,
+    "title": "Resaltadores",
+    "author": "Filgo",
+    "price": 1100.0,
+    "cost": 600.0,
+    "stock": 3
+  },
+  {
+    "id": 46,
+    "title": "Tijeras",
+    "author": "Maped 13cm",
+    "price": 2000.0,
+    "cost": 1000.0,
+    "stock": 11
+  },
+  {
+    "id": 47,
+    "title": "Tizas",
+    "author": "General",
+    "price": 200.0,
+    "cost": 50.0,
+    "stock": 100
+  },
+  {
+    "id": 48,
+    "title": "Regla dura",
+    "author": "30cm",
+    "price": 1100.0,
+    "cost": 5500.0,
+    "stock": 2
+  },
+  {
+    "id": 49,
+    "title": "Regla dura",
+    "author": "20cm",
+    "price": 600.0,
+    "cost": 300.0,
+    "stock": 3
+  },
+  {
+    "id": 50,
+    "title": "Regla dura",
+    "author": "15cm",
+    "price": 500.0,
+    "cost": 250.0,
+    "stock": 3
+  },
+  {
+    "id": 51,
+    "title": "Sacapuntas",
+    "author": "plastico",
+    "price": 300.0,
+    "cost": 150.0,
+    "stock": 60
+  },
+  {
+    "id": 52,
+    "title": "Sacapuntas",
+    "author": "metal",
+    "price": 500.0,
+    "cost": 250.0,
+    "stock": 17
+  },
+  {
+    "id": 53,
+    "title": "gomas",
+    "author": "nan",
+    "price": 300.0,
+    "cost": 150.0,
+    "stock": 47
+  },
+  {
+    "id": 54,
+    "title": "pinceles",
+    "author": "grades",
+    "price": 400.0,
+    "cost": 200.0,
+    "stock": 4
+  },
+  {
+    "id": 55,
+    "title": "Pinceles",
+    "author": "chicos",
+    "price": 600.0,
+    "cost": 300.0,
+    "stock": 27
+  },
+  {
+    "id": 56,
+    "title": "Globos",
+    "author": "comun",
+    "price": 300.0,
+    "cost": 150.0,
+    "stock": 20
+  },
+  {
+    "id": 57,
+    "title": "lapices",
+    "author": "metalicos",
+    "price": 3100.0,
+    "cost": 1500.0,
+    "stock": 9
+  },
+  {
+    "id": 58,
+    "title": "pegamentos",
+    "author": "para zapatillas",
+    "price": 500.0,
+    "cost": 250.0,
+    "stock": 5
+  },
+  {
+    "id": 59,
+    "title": "fibrones",
+    "author": "no negros",
+    "price": 1500.0,
+    "cost": 1000.0,
+    "stock": 48
+  },
+  {
+    "id": 60,
+    "title": "Lapicera bic",
+    "author": "ultrafina",
+    "price": 1200.0,
+    "cost": 600.0,
+    "stock": 50
+  },
+  {
+    "id": 61,
+    "title": "Set geometrico",
+    "author": "3 piezas maped",
+    "price": 3000.0,
+    "cost": 1500.0,
+    "stock": 5
+  },
+  {
+    "id": 62,
+    "title": "Trinchetas",
+    "author": "nan",
+    "price": 1000.0,
+    "cost": 500.0,
+    "stock": 5
+  },
+  {
+    "id": 63,
+    "title": "Plumas",
+    "author": "nan",
+    "price": 1200.0,
+    "cost": 600.0,
+    "stock": 2
+  },
+  {
+    "id": 64,
+    "title": "Corrector en cinta",
+    "author": "nan",
+    "price": 1200.0,
+    "cost": 600.0,
+    "stock": 2
+  },
+  {
+    "id": 65,
+    "title": "Escarapelas",
+    "author": "2 tipos",
+    "price": 300.0,
+    "cost": 150.0,
+    "stock": 23
+  },
+  {
+    "id": 66,
+    "title": "Lentejuelas",
+    "author": "5 bolsas",
+    "price": 4000.0,
+    "cost": 2000.0,
+    "stock": 2
+  },
+  {
+    "id": 67,
+    "title": "Palos de picole",
+    "author": "color y simple",
+    "price": 1500.0,
+    "cost": 700.0,
+    "stock": 8
+  },
+  {
+    "id": 68,
+    "title": "Papel crepè",
+    "author": "colores",
+    "price": 800.0,
+    "cost": 400.0,
+    "stock": 100
+  },
+  {
+    "id": 69,
+    "title": "goma eva",
+    "author": "lisa",
+    "price": 1000.0,
+    "cost": 500.0,
+    "stock": 25
+  },
+  {
+    "id": 70,
+    "title": "Mochila",
+    "author": "negra lisa",
+    "price": 30000.0,
+    "cost": 15000.0,
+    "stock": 1
+  },
+  {
+    "id": 71,
+    "title": "Tijeras",
+    "author": "17mm",
+    "price": 2500.0,
+    "cost": 1200.0,
+    "stock": 3
+  },
+  {
+    "id": 72,
+    "title": "ojalillos",
+    "author": "blancos",
+    "price": 200.0,
+    "cost": 100.0,
+    "stock": 19
+  },
+  {
+    "id": 73,
+    "title": "Block cansoón",
+    "author": "N3",
+    "price": 1000.0,
+    "cost": 500.0,
+    "stock": 10
+  },
+  {
+    "id": 74,
+    "title": "Tarjetas U 30",
+    "author": "hoja dura ",
+    "price": 4000.0,
+    "cost": 1000.0,
+    "stock": 0
+  },
+  {
+    "id": 75,
+    "title": "Albun ars ",
+    "author": "con 32 figuritas ",
+    "price": 3500.0,
+    "cost": 2000.0,
+    "stock": 4
+  },
+  {
+    "id": 76,
+    "title": "figuritas ",
+    "author": "x4",
+    "price": 800.0,
+    "cost": 100.0,
+    "stock": 20
+  }
+]
