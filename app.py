@@ -79,10 +79,23 @@ def get_sale_date(sale):
     if "date" in sale:
         return sale["date"]
 
+    if "fecha" in sale:
+        return sale["fecha"]
+
     if "date_time" in sale:
         return sale["date_time"].split(" ")[0]
 
     return datetime.now().strftime("%Y-%m-%d")
+
+
+def get_sale_time(sale):
+    if "hora" in sale:
+        return sale["hora"]
+
+    if "date_time" in sale and " " in sale["date_time"]:
+        return sale["date_time"].split(" ")[1]
+
+    return "00:00:00"
 
 
 def normalize_sale(sale):
@@ -103,6 +116,7 @@ def normalize_sale(sale):
         "costoTotal": total_cost,
         "ganancia": profit,
         "fecha": get_sale_date(sale),
+        "hora": get_sale_time(sale),
     }
 
 
@@ -128,6 +142,44 @@ def build_daily_stats(sales):
     return stats_by_day
 
 
+def build_product_sales_stats(sales):
+    product_totals = {}
+
+    for sale in sales:
+        normalized_sale = normalize_sale(sale)
+        product_name = normalized_sale["producto"]
+
+        if not product_name:
+            continue
+
+        product_totals[product_name] = product_totals.get(product_name, 0) + normalized_sale["cantidad"]
+
+    if not product_totals:
+        return None
+
+    product_name = max(product_totals, key=product_totals.get)
+
+    return {
+        "producto": product_name,
+        "cantidad": product_totals[product_name],
+    }
+
+
+def group_sales_by_date(sales):
+    grouped_sales = {}
+
+    for sale in sales:
+        normalized_sale = normalize_sale(sale)
+        sale_date = normalized_sale["fecha"]
+
+        if sale_date not in grouped_sales:
+            grouped_sales[sale_date] = []
+
+        grouped_sales[sale_date].append(normalized_sale)
+
+    return dict(sorted(grouped_sales.items(), reverse=True))
+
+
 def find_product_for_sale(products, sale):
     normalized_sale = normalize_sale(sale)
     product_id = normalized_sale["product_id"]
@@ -148,7 +200,11 @@ def find_product_for_sale(products, sale):
 def index():
     products = load_books()
     sales = load_sales()
+    normalized_sales = [normalize_sale(sale) for sale in sales]
+    normalized_sales.sort(key=lambda sale: (sale["fecha"], sale["hora"]), reverse=True)
     stats_by_day = build_daily_stats(sales)
+    sales_by_date = group_sales_by_date(sales)
+    best_selling_product = build_product_sales_stats(sales)
     today = datetime.now().strftime("%Y-%m-%d")
     total_invested = sum(product.get("cost", 0.0) * product["stock"] for product in products)
     today_stats = stats_by_day.get(
@@ -172,9 +228,12 @@ def index():
     return render_template(
         "index.html",
         products=products,
+        sales=normalized_sales,
+        sales_by_date=sales_by_date,
         today_stats=today_stats,
         best_day=best_day,
         worst_day=worst_day,
+        best_selling_product=best_selling_product,
         total_invested=total_invested,
     )
 
@@ -274,6 +333,7 @@ def update_product(book_id):
 def sell_book(book_id):
     products = load_books()
     sales = load_sales()
+    now = datetime.now()
 
     for product in products:
         if product["id"] == book_id and product["stock"] > 0:
@@ -293,7 +353,8 @@ def sell_book(book_id):
                     "totalVenta": total_sale,
                     "costoTotal": total_cost,
                     "ganancia": profit,
-                    "fecha": datetime.now().strftime("%Y-%m-%d"),
+                    "fecha": now.strftime("%Y-%m-%d"),
+                    "hora": now.strftime("%H:%M:%S"),
                 }
             )
             break
