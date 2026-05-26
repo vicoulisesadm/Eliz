@@ -1,4 +1,7 @@
 import json
+import os
+import shutil
+import sqlite3
 from datetime import datetime
 from pathlib import Path
 
@@ -10,38 +13,221 @@ app = Flask(__name__)
 
 DATA_FILE = Path("books.json")
 SALES_FILE = Path("sales.json")
+DEFAULT_DATABASE_FILE = (
+    Path("/var/data/libreria_eliz.db")
+    if os.environ.get("RENDER") and Path("/var/data").exists()
+    else Path("libreria_eliz.db")
+)
+DATABASE_FILE = Path(os.environ.get("DATABASE_PATH", DEFAULT_DATABASE_FILE))
+BACKUP_DIR = Path(os.environ.get("BACKUP_DIR", DATABASE_FILE.parent / "backups"))
 
 
-def load_books():
-    if not DATA_FILE.exists():
+def get_connection():
+    DATABASE_FILE.parent.mkdir(parents=True, exist_ok=True)
+    connection = sqlite3.connect(DATABASE_FILE)
+    connection.row_factory = sqlite3.Row
+    return connection
+
+
+def backup_database():
+    if not DATABASE_FILE.exists():
+        return
+
+    BACKUP_DIR.mkdir(parents=True, exist_ok=True)
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+    backup_file = BACKUP_DIR / f"libreria_eliz_{timestamp}.db"
+    shutil.copy2(DATABASE_FILE, backup_file)
+
+
+def normalize_product(product):
+    return {
+        "id": product["id"],
+        "title": product["title"],
+        "author": product["author"],
+        "price": float(product["price"]),
+        "cost": float(product.get("cost", 0.0)),
+        "stock": int(product["stock"]),
+    }
+
+
+def load_json_file(file_path):
+    if not file_path.exists():
         return []
 
-    with DATA_FILE.open("r", encoding="utf-8") as file:
-        books = json.load(file)
-
-    # Asegura compatibilidad con productos guardados antes de agregar el costo.
-    for book in books:
-        book.setdefault("cost", 0.0)
-
-    return books
-
-
-def save_books(books):
-    with DATA_FILE.open("w", encoding="utf-8") as file:
-        json.dump(books, file, indent=2, ensure_ascii=False)
-
-
-def load_sales():
-    if not SALES_FILE.exists():
-        return []
-
-    with SALES_FILE.open("r", encoding="utf-8") as file:
+    with file_path.open("r", encoding="utf-8") as file:
         return json.load(file)
 
 
+def initialize_database():
+    with get_connection() as connection:
+        connection.execute(
+            """
+            CREATE TABLE IF NOT EXISTS products (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                title TEXT NOT NULL,
+                author TEXT NOT NULL,
+                price REAL NOT NULL DEFAULT 0,
+                cost REAL NOT NULL DEFAULT 0,
+                stock INTEGER NOT NULL DEFAULT 0
+            )
+            """
+        )
+        connection.execute(
+            """
+            CREATE TABLE IF NOT EXISTS sales (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                product_id INTEGER,
+                product_name TEXT NOT NULL,
+                quantity INTEGER NOT NULL DEFAULT 1,
+                price_unit REAL NOT NULL DEFAULT 0,
+                cost_unit REAL NOT NULL DEFAULT 0,
+                total_sale REAL NOT NULL DEFAULT 0,
+                total_cost REAL NOT NULL DEFAULT 0,
+                profit REAL NOT NULL DEFAULT 0,
+                sale_date TEXT NOT NULL,
+                sale_time TEXT NOT NULL
+            )
+            """
+        )
+
+        product_count = connection.execute("SELECT COUNT(*) FROM products").fetchone()[0]
+        if product_count == 0:
+            for product in load_json_file(DATA_FILE):
+                normalized_product = normalize_product(product)
+                connection.execute(
+                    """
+                    INSERT INTO products (id, title, author, price, cost, stock)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        normalized_product["id"],
+                        normalized_product["title"],
+                        normalized_product["author"],
+                        normalized_product["price"],
+                        normalized_product["cost"],
+                        normalized_product["stock"],
+                    ),
+                )
+
+        sale_count = connection.execute("SELECT COUNT(*) FROM sales").fetchone()[0]
+        if sale_count == 0:
+            for sale in load_json_file(SALES_FILE):
+                normalized_sale = normalize_sale(sale)
+                connection.execute(
+                    """
+                    INSERT INTO sales (
+                        product_id, product_name, quantity, price_unit, cost_unit,
+                        total_sale, total_cost, profit, sale_date, sale_time
+                    )
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        normalized_sale["product_id"],
+                        normalized_sale["producto"],
+                        normalized_sale["cantidad"],
+                        normalized_sale["precioUnitario"],
+                        normalized_sale["costoUnitario"],
+                        normalized_sale["totalVenta"],
+                        normalized_sale["costoTotal"],
+                        normalized_sale["ganancia"],
+                        normalized_sale["fecha"],
+                        normalized_sale["hora"],
+                    ),
+                )
+
+
+def load_books():
+    with get_connection() as connection:
+        rows = connection.execute(
+            "SELECT id, title, author, price, cost, stock FROM products ORDER BY id"
+        ).fetchall()
+
+    return [normalize_product(dict(row)) for row in rows]
+
+
+def save_books(books):
+    backup_database()
+
+    with get_connection() as connection:
+        connection.execute("DELETE FROM products")
+
+        for product in books:
+            normalized_product = normalize_product(product)
+            connection.execute(
+                """
+                INSERT INTO products (id, title, author, price, cost, stock)
+                VALUES (?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    normalized_product["id"],
+                    normalized_product["title"],
+                    normalized_product["author"],
+                    normalized_product["price"],
+                    normalized_product["cost"],
+                    normalized_product["stock"],
+                ),
+            )
+
+
+def load_sales():
+    with get_connection() as connection:
+        rows = connection.execute(
+            """
+            SELECT
+                id, product_id, product_name, quantity, price_unit, cost_unit,
+                total_sale, total_cost, profit, sale_date, sale_time
+            FROM sales
+            ORDER BY id
+            """
+        ).fetchall()
+
+    return [
+        {
+            "id": row["id"],
+            "product_id": row["product_id"],
+            "producto": row["product_name"],
+            "cantidad": row["quantity"],
+            "precioUnitario": row["price_unit"],
+            "costoUnitario": row["cost_unit"],
+            "totalVenta": row["total_sale"],
+            "costoTotal": row["total_cost"],
+            "ganancia": row["profit"],
+            "fecha": row["sale_date"],
+            "hora": row["sale_time"],
+        }
+        for row in rows
+    ]
+
+
 def save_sales(sales):
-    with SALES_FILE.open("w", encoding="utf-8") as file:
-        json.dump(sales, file, indent=2, ensure_ascii=False)
+    backup_database()
+
+    with get_connection() as connection:
+        connection.execute("DELETE FROM sales")
+
+        for sale in sales:
+            normalized_sale = normalize_sale(sale)
+            connection.execute(
+                """
+                INSERT INTO sales (
+                    product_id, product_name, quantity, price_unit, cost_unit,
+                    total_sale, total_cost, profit, sale_date, sale_time
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    normalized_sale["product_id"],
+                    normalized_sale["producto"],
+                    normalized_sale["cantidad"],
+                    normalized_sale["precioUnitario"],
+                    normalized_sale["costoUnitario"],
+                    normalized_sale["totalVenta"],
+                    normalized_sale["costoTotal"],
+                    normalized_sale["ganancia"],
+                    normalized_sale["fecha"],
+                    normalized_sale["hora"],
+                ),
+            )
 
 
 def get_next_id(books):
@@ -180,6 +366,100 @@ def group_sales_by_date(sales):
     return dict(sorted(grouped_sales.items(), reverse=True))
 
 
+def get_period_label(sale_date, period):
+    date_value = datetime.strptime(sale_date, "%Y-%m-%d")
+
+    if period == "week":
+        year, week, _ = date_value.isocalendar()
+        return f"{year}-S{week:02d}"
+
+    if period == "month":
+        return date_value.strftime("%Y-%m")
+
+    return sale_date
+
+
+def aggregate_sales_for_period(sales, period):
+    grouped = {}
+
+    for sale in sales:
+        normalized_sale = normalize_sale(sale)
+        label = get_period_label(normalized_sale["fecha"], period)
+
+        if label not in grouped:
+            grouped[label] = {
+                "total_vendido": 0.0,
+                "ganancia_total": 0.0,
+                "costo_total": 0.0,
+            }
+
+        grouped[label]["total_vendido"] += normalized_sale["totalVenta"]
+        grouped[label]["ganancia_total"] += normalized_sale["ganancia"]
+        grouped[label]["costo_total"] += normalized_sale["costoTotal"]
+
+    labels = sorted(grouped.keys())
+
+    return {
+        "labels": labels,
+        "ventas": [grouped[label]["total_vendido"] for label in labels],
+        "ganancias": [grouped[label]["ganancia_total"] for label in labels],
+        "costos": [grouped[label]["costo_total"] for label in labels],
+    }
+
+
+def build_chart_data(products, sales):
+    product_totals = {}
+
+    for sale in sales:
+        normalized_sale = normalize_sale(sale)
+        product_name = normalized_sale["producto"]
+
+        if not product_name:
+            continue
+
+        product_totals[product_name] = product_totals.get(product_name, 0) + normalized_sale["cantidad"]
+
+    top_products = sorted(product_totals.items(), key=lambda item: item[1], reverse=True)[:10]
+    stock_products = sorted(products, key=lambda product: product["stock"])[:15]
+
+    return {
+        "sales": {
+            "day": aggregate_sales_for_period(sales, "day"),
+            "week": aggregate_sales_for_period(sales, "week"),
+            "month": aggregate_sales_for_period(sales, "month"),
+        },
+        "top_products": {
+            "labels": [product_name for product_name, _ in top_products],
+            "quantities": [quantity for _, quantity in top_products],
+        },
+        "stock": {
+            "labels": [product["title"] for product in stock_products],
+            "values": [product["stock"] for product in stock_products],
+            "colors": [
+                "rgba(220, 38, 38, 0.82)" if product["stock"] <= 2 else "rgba(37, 99, 235, 0.72)"
+                for product in stock_products
+            ],
+        },
+    }
+
+
+def build_visual_summary(today_stats, sales, today):
+    products_sold_today = 0
+
+    for sale in sales:
+        normalized_sale = normalize_sale(sale)
+
+        if normalized_sale["fecha"] == today:
+            products_sold_today += normalized_sale["cantidad"]
+
+    return {
+        "total_vendido_hoy": today_stats["total_vendido"],
+        "ganancia_hoy": today_stats["ganancia_total"],
+        "costo_hoy": today_stats["costo_total"],
+        "productos_vendidos_hoy": products_sold_today,
+    }
+
+
 def find_product_for_sale(products, sale):
     normalized_sale = normalize_sale(sale)
     product_id = normalized_sale["product_id"]
@@ -225,6 +505,9 @@ def index():
         best_day = max(daily_stats, key=lambda item: item["total_vendido"])
         worst_day = min(daily_stats, key=lambda item: item["total_vendido"])
 
+    chart_data = build_chart_data(products, sales)
+    visual_summary = build_visual_summary(today_stats, sales, today)
+
     return render_template(
         "index.html",
         products=products,
@@ -235,6 +518,8 @@ def index():
         worst_day=worst_day,
         best_selling_product=best_selling_product,
         total_invested=total_invested,
+        chart_data=chart_data,
+        visual_summary=visual_summary,
     )
 
 
@@ -402,6 +687,9 @@ def delete_product(book_id):
     save_books(products)
 
     return redirect(url_for("index"))
+
+
+initialize_database()
 
 
 if __name__ == "__main__":

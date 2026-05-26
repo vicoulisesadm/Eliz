@@ -1,14 +1,14 @@
-# Stock de librería
+# Libreria Eliz
 
-Aplicación web simple para gestionar el stock de una librería.
+Aplicacion web simple para gestionar stock, ventas, ganancias e historial.
 
-Está hecha con Python y Flask. Los datos se guardan en el archivo `books.json`.
+Esta hecha con Python y Flask. Los datos se guardan en SQLite.
 
 ## Requisitos
 
 - Python 3 instalado
 
-## Cómo ejecutar el proyecto
+## Como ejecutar el proyecto
 
 1. Abrir una terminal en la carpeta del proyecto.
 
@@ -32,13 +32,13 @@ En macOS o Linux:
 source venv/bin/activate
 ```
 
-4. Instalar Flask:
+4. Instalar dependencias:
 
 ```bash
 pip install -r requirements.txt
 ```
 
-5. Ejecutar la aplicación:
+5. Ejecutar la aplicacion:
 
 ```bash
 python app.py
@@ -52,7 +52,33 @@ http://127.0.0.1:5000
 
 ## Funcionalidades
 
-- Agregar libros con título, autor, precio y cantidad en stock.
-- Ver la lista de libros cargados.
-- Actualizar el stock de cada libro.
-- Guardar los datos en `books.json`.
+- Agregar productos con nombre, detalle, precio, costo y stock.
+- Importar productos desde Excel.
+- Vender productos y descontar stock.
+- Registrar historial de ventas.
+- Calcular ventas, costos, ganancias e inversion en stock.
+- Editar productos desde la tabla.
+- Deshacer la ultima venta.
+- Eliminar productos.
+- Buscar y filtrar productos.
+
+## Base de datos
+
+La aplicacion usa SQLite y crea automaticamente el archivo `libreria_eliz.db` si no existe.
+
+Si existen `books.json` y `sales.json`, la app los importa automaticamente la primera vez que la base esta vacia.
+
+Tambien crea backups automaticos de la base antes de guardar cambios. Por defecto quedan en la carpeta `backups`.
+
+## Render
+
+Para que SQLite sea permanente en Render, configura un Persistent Disk y guarda la base dentro de ese disco.
+
+Una configuracion simple:
+
+```text
+DATABASE_PATH=/var/data/libreria_eliz.db
+BACKUP_DIR=/var/data/backups
+```
+
+Si Render tiene montado `/var/data`, la app intenta usar esa ruta automaticamente.
