@@ -8,3 +8,4 @@ libreria_eliz.db
 *.sqlite3
 
 backups/
+__pycache__/
