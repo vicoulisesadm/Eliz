@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+
+database.db
+libreria_eliz.db
+*.db-journal
+*.sqlite
+*.sqlite3
+
+backups/

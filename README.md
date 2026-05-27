@@ -64,9 +64,9 @@ http://127.0.0.1:5000
 
 ## Base de datos
 
-La aplicacion usa SQLite y crea automaticamente el archivo `libreria_eliz.db` si no existe.
+La aplicacion usa SQLite y crea automaticamente el archivo `database.db` si no existe.
 
-Si existen `books.json` y `sales.json`, la app los importa automaticamente la primera vez que la base esta vacia.
+Si existe una base anterior llamada `libreria_eliz.db`, la app la migra automaticamente a `database.db` la primera vez que la base nueva esta vacia.
 
 Tambien crea backups automaticos de la base antes de guardar cambios. Por defecto quedan en la carpeta `backups`.
 
@@ -77,7 +77,7 @@ Para que SQLite sea permanente en Render, configura un Persistent Disk y guarda 
 Una configuracion simple:
 
 ```text
-DATABASE_PATH=/var/data/libreria_eliz.db
+DATABASE_PATH=/var/data/database.db
 BACKUP_DIR=/var/data/backups
 ```
 

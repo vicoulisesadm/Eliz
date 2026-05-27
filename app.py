@@ -1,4 +1,3 @@
-import json
 import os
 import shutil
 import sqlite3
@@ -11,21 +10,21 @@ from flask import Flask, redirect, render_template, request, url_for
 
 app = Flask(__name__)
 
-DATA_FILE = Path("books.json")
-SALES_FILE = Path("sales.json")
 DEFAULT_DATABASE_FILE = (
-    Path("/var/data/libreria_eliz.db")
+    Path("/var/data/database.db")
     if os.environ.get("RENDER") and Path("/var/data").exists()
-    else Path("libreria_eliz.db")
+    else Path("database.db")
 )
 DATABASE_FILE = Path(os.environ.get("DATABASE_PATH", DEFAULT_DATABASE_FILE))
 BACKUP_DIR = Path(os.environ.get("BACKUP_DIR", DATABASE_FILE.parent / "backups"))
+LEGACY_DATABASE_FILE = Path("libreria_eliz.db")
 
 
 def get_connection():
     DATABASE_FILE.parent.mkdir(parents=True, exist_ok=True)
     connection = sqlite3.connect(DATABASE_FILE)
     connection.row_factory = sqlite3.Row
+    connection.execute("PRAGMA foreign_keys = ON")
     return connection
 
 
@@ -35,7 +34,7 @@ def backup_database():
 
     BACKUP_DIR.mkdir(parents=True, exist_ok=True)
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
-    backup_file = BACKUP_DIR / f"libreria_eliz_{timestamp}.db"
+    backup_file = BACKUP_DIR / f"database_{timestamp}.db"
     shutil.copy2(DATABASE_FILE, backup_file)
 
 
@@ -48,14 +47,6 @@ def normalize_product(product):
         "cost": float(product.get("cost", 0.0)),
         "stock": int(product["stock"]),
     }
-
-
-def load_json_file(file_path):
-    if not file_path.exists():
-        return []
-
-    with file_path.open("r", encoding="utf-8") as file:
-        return json.load(file)
 
 
 def initialize_database():
@@ -85,34 +76,69 @@ def initialize_database():
                 total_cost REAL NOT NULL DEFAULT 0,
                 profit REAL NOT NULL DEFAULT 0,
                 sale_date TEXT NOT NULL,
-                sale_time TEXT NOT NULL
+                sale_time TEXT NOT NULL,
+                FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE SET NULL
             )
             """
         )
+        connection.execute("CREATE INDEX IF NOT EXISTS idx_products_title ON products(title)")
+        connection.execute("CREATE INDEX IF NOT EXISTS idx_products_stock ON products(stock)")
+        connection.execute("CREATE INDEX IF NOT EXISTS idx_sales_date ON sales(sale_date)")
+        connection.execute("CREATE INDEX IF NOT EXISTS idx_sales_product ON sales(product_id)")
 
         product_count = connection.execute("SELECT COUNT(*) FROM products").fetchone()[0]
-        if product_count == 0:
-            for product in load_json_file(DATA_FILE):
-                normalized_product = normalize_product(product)
+        sale_count = connection.execute("SELECT COUNT(*) FROM sales").fetchone()[0]
+
+    if product_count == 0 and sale_count == 0:
+        migrate_from_legacy_sqlite()
+
+
+def migrate_from_legacy_sqlite():
+    if not LEGACY_DATABASE_FILE.exists() or LEGACY_DATABASE_FILE.resolve() == DATABASE_FILE.resolve():
+        return
+
+    legacy_connection = sqlite3.connect(LEGACY_DATABASE_FILE)
+    legacy_connection.row_factory = sqlite3.Row
+
+    try:
+        legacy_tables = {
+            row["name"]
+            for row in legacy_connection.execute(
+                "SELECT name FROM sqlite_master WHERE type = 'table'"
+            ).fetchall()
+        }
+
+        if not {"products", "sales"}.issubset(legacy_tables):
+            return
+
+        with get_connection() as connection:
+            for product in legacy_connection.execute(
+                "SELECT id, title, author, price, cost, stock FROM products ORDER BY id"
+            ).fetchall():
                 connection.execute(
                     """
-                    INSERT INTO products (id, title, author, price, cost, stock)
+                    INSERT OR IGNORE INTO products (id, title, author, price, cost, stock)
                     VALUES (?, ?, ?, ?, ?, ?)
                     """,
                     (
-                        normalized_product["id"],
-                        normalized_product["title"],
-                        normalized_product["author"],
-                        normalized_product["price"],
-                        normalized_product["cost"],
-                        normalized_product["stock"],
+                        product["id"],
+                        product["title"],
+                        product["author"],
+                        product["price"],
+                        product["cost"],
+                        product["stock"],
                     ),
                 )
 
-        sale_count = connection.execute("SELECT COUNT(*) FROM sales").fetchone()[0]
-        if sale_count == 0:
-            for sale in load_json_file(SALES_FILE):
-                normalized_sale = normalize_sale(sale)
+            for sale in legacy_connection.execute(
+                """
+                SELECT
+                    product_id, product_name, quantity, price_unit, cost_unit,
+                    total_sale, total_cost, profit, sale_date, sale_time
+                FROM sales
+                ORDER BY id
+                """
+            ).fetchall():
                 connection.execute(
                     """
                     INSERT INTO sales (
@@ -122,18 +148,20 @@ def initialize_database():
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """,
                     (
-                        normalized_sale["product_id"],
-                        normalized_sale["producto"],
-                        normalized_sale["cantidad"],
-                        normalized_sale["precioUnitario"],
-                        normalized_sale["costoUnitario"],
-                        normalized_sale["totalVenta"],
-                        normalized_sale["costoTotal"],
-                        normalized_sale["ganancia"],
-                        normalized_sale["fecha"],
-                        normalized_sale["hora"],
+                        sale["product_id"],
+                        sale["product_name"],
+                        sale["quantity"],
+                        sale["price_unit"],
+                        sale["cost_unit"],
+                        sale["total_sale"],
+                        sale["total_cost"],
+                        sale["profit"],
+                        sale["sale_date"],
+                        sale["sale_time"],
                     ),
                 )
+    finally:
+        legacy_connection.close()
 
 
 def load_books():
@@ -237,7 +265,7 @@ def get_next_id(books):
     return max(book["id"] for book in books) + 1
 
 
-def build_product_from_row(row, product_id):
+def build_product_from_row(row):
     product_name = str(row.get("producto", "")).strip()
     detail = str(row.get("detalle", "")).strip()
 
@@ -252,7 +280,6 @@ def build_product_from_row(row, product_id):
         return None
 
     return {
-        "id": product_id,
         "title": product_name,
         "author": detail,
         "price": float(price),
@@ -525,19 +552,25 @@ def index():
 
 @app.route("/add", methods=["POST"])
 def add_book():
-    products = load_books()
+    backup_database()
 
-    new_product = {
-        "id": get_next_id(products),
-        "title": request.form["title"],
-        "author": request.form["author"],
-        "price": float(request.form["price"]),
-        "cost": float(request.form["cost"]),
-        "stock": int(request.form["stock"]),
-    }
-
-    products.append(new_product)
-    save_books(products)
+    try:
+        with get_connection() as connection:
+            connection.execute(
+                """
+                INSERT INTO products (title, author, price, cost, stock)
+                VALUES (?, ?, ?, ?, ?)
+                """,
+                (
+                    request.form["title"].strip(),
+                    request.form["author"].strip(),
+                    float(request.form["price"]),
+                    float(request.form["cost"]),
+                    int(request.form["stock"]),
+                ),
+            )
+    except (KeyError, ValueError, sqlite3.Error):
+        return redirect(url_for("index"))
 
     return redirect(url_for("index"))
 
@@ -559,132 +592,193 @@ def upload_excel():
     if not required_columns.issubset(data_frame.columns):
         return redirect(url_for("index"))
 
-    products = load_books()
-    next_id = get_next_id(products)
+    backup_database()
 
-    for _, row in data_frame.iterrows():
-        new_product = build_product_from_row(row, next_id)
+    with get_connection() as connection:
+        for _, row in data_frame.iterrows():
+            new_product = build_product_from_row(row)
 
-        if new_product is None:
-            continue
+            if new_product is None:
+                continue
 
-        products.append(new_product)
-        next_id += 1
-
-    save_books(products)
+            connection.execute(
+                """
+                INSERT INTO products (title, author, price, cost, stock)
+                VALUES (?, ?, ?, ?, ?)
+                """,
+                (
+                    new_product["title"],
+                    new_product["author"],
+                    new_product["price"],
+                    new_product["cost"],
+                    new_product["stock"],
+                ),
+            )
 
     return redirect(url_for("index"))
 
 
 @app.route("/update-stock/<int:book_id>", methods=["POST"])
 def update_stock(book_id):
-    products = load_books()
-    new_stock = int(request.form["stock"])
+    backup_database()
 
-    for product in products:
-        if product["id"] == book_id:
-            product["stock"] = new_stock
-            break
-
-    save_books(products)
+    try:
+        with get_connection() as connection:
+            connection.execute(
+                "UPDATE products SET stock = ? WHERE id = ?",
+                (int(request.form["stock"]), book_id),
+            )
+    except (KeyError, ValueError, sqlite3.Error):
+        return redirect(url_for("index"))
 
     return redirect(url_for("index"))
 
 
 @app.route("/update-product/<int:book_id>", methods=["POST"])
 def update_product(book_id):
-    products = load_books()
-    new_title = request.form["title"].strip()
-    new_author = request.form["author"].strip()
-    new_price = float(request.form["price"])
-    new_cost = float(request.form["cost"])
-    new_stock = int(request.form["stock"])
+    backup_database()
 
-    for product in products:
-        if product["id"] == book_id:
-            product["title"] = new_title
-            product["author"] = new_author
-            product["price"] = new_price
-            product["cost"] = new_cost
-            product["stock"] = new_stock
-            break
-
-    save_books(products)
+    try:
+        with get_connection() as connection:
+            connection.execute(
+                """
+                UPDATE products
+                SET title = ?, author = ?, price = ?, cost = ?, stock = ?
+                WHERE id = ?
+                """,
+                (
+                    request.form["title"].strip(),
+                    request.form["author"].strip(),
+                    float(request.form["price"]),
+                    float(request.form["cost"]),
+                    int(request.form["stock"]),
+                    book_id,
+                ),
+            )
+    except (KeyError, ValueError, sqlite3.Error):
+        return redirect(url_for("index"))
 
     return redirect(url_for("index"))
 
 
 @app.route("/sell/<int:book_id>", methods=["POST"])
 def sell_book(book_id):
-    products = load_books()
-    sales = load_sales()
+    backup_database()
     now = datetime.now()
 
-    for product in products:
-        if product["id"] == book_id and product["stock"] > 0:
+    try:
+        with get_connection() as connection:
+            product = connection.execute(
+                "SELECT id, title, price, cost, stock FROM products WHERE id = ?",
+                (book_id,),
+            ).fetchone()
+
+            if product is None or product["stock"] <= 0:
+                return redirect(url_for("index"))
+
             quantity = 1
-            total_sale = product["price"] * quantity
-            total_cost = product.get("cost", 0.0) * quantity
+            total_sale = float(product["price"]) * quantity
+            total_cost = float(product["cost"]) * quantity
             profit = total_sale - total_cost
 
-            product["stock"] -= quantity
-            sales.append(
-                {
-                    "product_id": product["id"],
-                    "producto": product["title"],
-                    "cantidad": quantity,
-                    "precioUnitario": product["price"],
-                    "costoUnitario": product.get("cost", 0.0),
-                    "totalVenta": total_sale,
-                    "costoTotal": total_cost,
-                    "ganancia": profit,
-                    "fecha": now.strftime("%Y-%m-%d"),
-                    "hora": now.strftime("%H:%M:%S"),
-                }
+            connection.execute(
+                "UPDATE products SET stock = stock - ? WHERE id = ?",
+                (quantity, book_id),
             )
-            break
-
-    save_books(products)
-    save_sales(sales)
+            connection.execute(
+                """
+                INSERT INTO sales (
+                    product_id, product_name, quantity, price_unit, cost_unit,
+                    total_sale, total_cost, profit, sale_date, sale_time
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    product["id"],
+                    product["title"],
+                    quantity,
+                    product["price"],
+                    product["cost"],
+                    total_sale,
+                    total_cost,
+                    profit,
+                    now.strftime("%Y-%m-%d"),
+                    now.strftime("%H:%M:%S"),
+                ),
+            )
+    except sqlite3.Error:
+        return redirect(url_for("index"))
 
     return redirect(url_for("index"))
 
 
 @app.route("/undo-last-sale", methods=["POST"])
 def undo_last_sale():
-    sales = load_sales()
+    backup_database()
 
-    if not sales:
+    try:
+        with get_connection() as connection:
+            last_sale = connection.execute(
+                """
+                SELECT id, product_id, product_name, quantity
+                FROM sales
+                ORDER BY id DESC
+                LIMIT 1
+                """
+            ).fetchone()
+
+            if last_sale is None:
+                return redirect(url_for("index"))
+
+            if last_sale["product_id"] is not None:
+                connection.execute(
+                    "UPDATE products SET stock = stock + ? WHERE id = ?",
+                    (last_sale["quantity"], last_sale["product_id"]),
+                )
+            else:
+                connection.execute(
+                    """
+                    UPDATE products
+                    SET stock = stock + ?
+                    WHERE id = (
+                        SELECT id FROM products WHERE title = ? ORDER BY id LIMIT 1
+                    )
+                    """,
+                    (last_sale["quantity"], last_sale["product_name"]),
+                )
+
+            connection.execute("DELETE FROM sales WHERE id = ?", (last_sale["id"],))
+    except sqlite3.Error:
         return redirect(url_for("index"))
-
-    last_sale = sales.pop()
-    products = load_books()
-    product = find_product_for_sale(products, last_sale)
-
-    if product is not None:
-        product["stock"] += normalize_sale(last_sale)["cantidad"]
-        save_books(products)
-
-    save_sales(sales)
 
     return redirect(url_for("index"))
 
 
 @app.route("/reset-data", methods=["POST"])
 def reset_data():
-    save_sales([])
+    backup_database()
 
-    if request.form.get("delete_products") == "yes":
-        save_books([])
+    try:
+        with get_connection() as connection:
+            connection.execute("DELETE FROM sales")
+
+            if request.form.get("delete_products") == "yes":
+                connection.execute("DELETE FROM products")
+    except sqlite3.Error:
+        return redirect(url_for("index"))
 
     return redirect(url_for("index"))
 
 
 @app.route("/delete-product/<int:book_id>", methods=["POST"])
 def delete_product(book_id):
-    products = load_books()
-    products = [product for product in products if product["id"] != book_id]
-    save_books(products)
+    backup_database()
+
+    try:
+        with get_connection() as connection:
+            connection.execute("DELETE FROM products WHERE id = ?", (book_id,))
+    except sqlite3.Error:
+        return redirect(url_for("index"))
 
     return redirect(url_for("index"))
 
