@@ -6,36 +6,111 @@ from pathlib import Path
 
 import pandas as pd
 from flask import Flask, redirect, render_template, request, url_for
+from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy import func
+from sqlalchemy.exc import SQLAlchemyError
 
 
 app = Flask(__name__)
 
-DEFAULT_DATABASE_FILE = (
-    Path("/var/data/database.db")
-    if os.environ.get("RENDER") and Path("/var/data").exists()
-    else Path("database.db")
-)
-DATABASE_FILE = Path(os.environ.get("DATABASE_PATH", DEFAULT_DATABASE_FILE))
-BACKUP_DIR = Path(os.environ.get("BACKUP_DIR", DATABASE_FILE.parent / "backups"))
-LEGACY_DATABASE_FILE = Path("libreria_eliz.db")
+database_uri = os.environ.get("DATABASE_URL")
+
+if not database_uri:
+    default_database_file = (
+        Path("/var/data/database.db")
+        if os.environ.get("RENDER") and Path("/var/data").exists()
+        else Path("database.db")
+    )
+    database_uri = f"sqlite:///{default_database_file}"
+
+if database_uri.startswith("postgres://"):
+    database_uri = database_uri.replace("postgres://", "postgresql+psycopg://", 1)
+elif database_uri.startswith("postgresql://"):
+    database_uri = database_uri.replace("postgresql://", "postgresql+psycopg://", 1)
+
+app.config["SQLALCHEMY_DATABASE_URI"] = database_uri
+app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+
+db = SQLAlchemy(app)
+
+LEGACY_DATABASE_FILE = Path("database.db")
+OLDER_DATABASE_FILE = Path("libreria_eliz.db")
+BACKUP_DIR = Path(os.environ.get("BACKUP_DIR", "backups"))
 
 
-def get_connection():
-    DATABASE_FILE.parent.mkdir(parents=True, exist_ok=True)
-    connection = sqlite3.connect(DATABASE_FILE)
-    connection.row_factory = sqlite3.Row
-    connection.execute("PRAGMA foreign_keys = ON")
-    return connection
+class Product(db.Model):
+    __tablename__ = "products"
+
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(200), nullable=False, index=True)
+    author = db.Column(db.String(300), nullable=False)
+    price = db.Column(db.Float, nullable=False, default=0)
+    cost = db.Column(db.Float, nullable=False, default=0)
+    stock = db.Column(db.Integer, nullable=False, default=0, index=True)
+
+
+class Sale(db.Model):
+    __tablename__ = "sales"
+
+    id = db.Column(db.Integer, primary_key=True)
+    product_id = db.Column(db.Integer, db.ForeignKey("products.id", ondelete="SET NULL"), nullable=True, index=True)
+    product_name = db.Column(db.String(200), nullable=False)
+    quantity = db.Column(db.Integer, nullable=False, default=1)
+    price_unit = db.Column(db.Float, nullable=False, default=0)
+    cost_unit = db.Column(db.Float, nullable=False, default=0)
+    total_sale = db.Column(db.Float, nullable=False, default=0)
+    total_cost = db.Column(db.Float, nullable=False, default=0)
+    profit = db.Column(db.Float, nullable=False, default=0)
+    sale_date = db.Column(db.String(10), nullable=False, index=True)
+    sale_time = db.Column(db.String(8), nullable=False)
+
+    product = db.relationship("Product", backref="sales")
+
+
+def is_sqlite_database():
+    return app.config["SQLALCHEMY_DATABASE_URI"].startswith("sqlite")
 
 
 def backup_database():
-    if not DATABASE_FILE.exists():
+    if not is_sqlite_database():
+        return
+
+    database_path = app.config["SQLALCHEMY_DATABASE_URI"].replace("sqlite:///", "", 1)
+    database_file = Path(database_path)
+
+    if not database_file.exists():
         return
 
     BACKUP_DIR.mkdir(parents=True, exist_ok=True)
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
-    backup_file = BACKUP_DIR / f"database_{timestamp}.db"
-    shutil.copy2(DATABASE_FILE, backup_file)
+    shutil.copy2(database_file, BACKUP_DIR / f"database_{timestamp}.db")
+
+
+def product_to_dict(product):
+    return {
+        "id": product.id,
+        "title": product.title,
+        "author": product.author,
+        "price": float(product.price),
+        "cost": float(product.cost),
+        "stock": int(product.stock),
+    }
+
+
+def sale_to_dict(sale):
+    return {
+        "id": sale.id,
+        "product_id": sale.product_id,
+        "producto": sale.product_name,
+        "cantidad": sale.quantity,
+        "precioUnitario": float(sale.price_unit),
+        "costoUnitario": float(sale.cost_unit),
+        "totalVenta": float(sale.total_sale),
+        "costoTotal": float(sale.total_cost),
+        "ganancia": float(sale.profit),
+        "fecha": sale.sale_date,
+        "hora": sale.sale_time,
+    }
 
 
 def normalize_product(product):
@@ -46,245 +121,6 @@ def normalize_product(product):
         "price": float(product["price"]),
         "cost": float(product.get("cost", 0.0)),
         "stock": int(product["stock"]),
-    }
-
-
-def initialize_database():
-    with get_connection() as connection:
-        connection.execute(
-            """
-            CREATE TABLE IF NOT EXISTS products (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                title TEXT NOT NULL,
-                author TEXT NOT NULL,
-                price REAL NOT NULL DEFAULT 0,
-                cost REAL NOT NULL DEFAULT 0,
-                stock INTEGER NOT NULL DEFAULT 0
-            )
-            """
-        )
-        connection.execute(
-            """
-            CREATE TABLE IF NOT EXISTS sales (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                product_id INTEGER,
-                product_name TEXT NOT NULL,
-                quantity INTEGER NOT NULL DEFAULT 1,
-                price_unit REAL NOT NULL DEFAULT 0,
-                cost_unit REAL NOT NULL DEFAULT 0,
-                total_sale REAL NOT NULL DEFAULT 0,
-                total_cost REAL NOT NULL DEFAULT 0,
-                profit REAL NOT NULL DEFAULT 0,
-                sale_date TEXT NOT NULL,
-                sale_time TEXT NOT NULL,
-                FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE SET NULL
-            )
-            """
-        )
-        connection.execute("CREATE INDEX IF NOT EXISTS idx_products_title ON products(title)")
-        connection.execute("CREATE INDEX IF NOT EXISTS idx_products_stock ON products(stock)")
-        connection.execute("CREATE INDEX IF NOT EXISTS idx_sales_date ON sales(sale_date)")
-        connection.execute("CREATE INDEX IF NOT EXISTS idx_sales_product ON sales(product_id)")
-
-        product_count = connection.execute("SELECT COUNT(*) FROM products").fetchone()[0]
-        sale_count = connection.execute("SELECT COUNT(*) FROM sales").fetchone()[0]
-
-    if product_count == 0 and sale_count == 0:
-        migrate_from_legacy_sqlite()
-
-
-def migrate_from_legacy_sqlite():
-    if not LEGACY_DATABASE_FILE.exists() or LEGACY_DATABASE_FILE.resolve() == DATABASE_FILE.resolve():
-        return
-
-    legacy_connection = sqlite3.connect(LEGACY_DATABASE_FILE)
-    legacy_connection.row_factory = sqlite3.Row
-
-    try:
-        legacy_tables = {
-            row["name"]
-            for row in legacy_connection.execute(
-                "SELECT name FROM sqlite_master WHERE type = 'table'"
-            ).fetchall()
-        }
-
-        if not {"products", "sales"}.issubset(legacy_tables):
-            return
-
-        with get_connection() as connection:
-            for product in legacy_connection.execute(
-                "SELECT id, title, author, price, cost, stock FROM products ORDER BY id"
-            ).fetchall():
-                connection.execute(
-                    """
-                    INSERT OR IGNORE INTO products (id, title, author, price, cost, stock)
-                    VALUES (?, ?, ?, ?, ?, ?)
-                    """,
-                    (
-                        product["id"],
-                        product["title"],
-                        product["author"],
-                        product["price"],
-                        product["cost"],
-                        product["stock"],
-                    ),
-                )
-
-            for sale in legacy_connection.execute(
-                """
-                SELECT
-                    product_id, product_name, quantity, price_unit, cost_unit,
-                    total_sale, total_cost, profit, sale_date, sale_time
-                FROM sales
-                ORDER BY id
-                """
-            ).fetchall():
-                connection.execute(
-                    """
-                    INSERT INTO sales (
-                        product_id, product_name, quantity, price_unit, cost_unit,
-                        total_sale, total_cost, profit, sale_date, sale_time
-                    )
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    """,
-                    (
-                        sale["product_id"],
-                        sale["product_name"],
-                        sale["quantity"],
-                        sale["price_unit"],
-                        sale["cost_unit"],
-                        sale["total_sale"],
-                        sale["total_cost"],
-                        sale["profit"],
-                        sale["sale_date"],
-                        sale["sale_time"],
-                    ),
-                )
-    finally:
-        legacy_connection.close()
-
-
-def load_books():
-    with get_connection() as connection:
-        rows = connection.execute(
-            "SELECT id, title, author, price, cost, stock FROM products ORDER BY id"
-        ).fetchall()
-
-    return [normalize_product(dict(row)) for row in rows]
-
-
-def save_books(books):
-    backup_database()
-
-    with get_connection() as connection:
-        connection.execute("DELETE FROM products")
-
-        for product in books:
-            normalized_product = normalize_product(product)
-            connection.execute(
-                """
-                INSERT INTO products (id, title, author, price, cost, stock)
-                VALUES (?, ?, ?, ?, ?, ?)
-                """,
-                (
-                    normalized_product["id"],
-                    normalized_product["title"],
-                    normalized_product["author"],
-                    normalized_product["price"],
-                    normalized_product["cost"],
-                    normalized_product["stock"],
-                ),
-            )
-
-
-def load_sales():
-    with get_connection() as connection:
-        rows = connection.execute(
-            """
-            SELECT
-                id, product_id, product_name, quantity, price_unit, cost_unit,
-                total_sale, total_cost, profit, sale_date, sale_time
-            FROM sales
-            ORDER BY id
-            """
-        ).fetchall()
-
-    return [
-        {
-            "id": row["id"],
-            "product_id": row["product_id"],
-            "producto": row["product_name"],
-            "cantidad": row["quantity"],
-            "precioUnitario": row["price_unit"],
-            "costoUnitario": row["cost_unit"],
-            "totalVenta": row["total_sale"],
-            "costoTotal": row["total_cost"],
-            "ganancia": row["profit"],
-            "fecha": row["sale_date"],
-            "hora": row["sale_time"],
-        }
-        for row in rows
-    ]
-
-
-def save_sales(sales):
-    backup_database()
-
-    with get_connection() as connection:
-        connection.execute("DELETE FROM sales")
-
-        for sale in sales:
-            normalized_sale = normalize_sale(sale)
-            connection.execute(
-                """
-                INSERT INTO sales (
-                    product_id, product_name, quantity, price_unit, cost_unit,
-                    total_sale, total_cost, profit, sale_date, sale_time
-                )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """,
-                (
-                    normalized_sale["product_id"],
-                    normalized_sale["producto"],
-                    normalized_sale["cantidad"],
-                    normalized_sale["precioUnitario"],
-                    normalized_sale["costoUnitario"],
-                    normalized_sale["totalVenta"],
-                    normalized_sale["costoTotal"],
-                    normalized_sale["ganancia"],
-                    normalized_sale["fecha"],
-                    normalized_sale["hora"],
-                ),
-            )
-
-
-def get_next_id(books):
-    if not books:
-        return 1
-
-    return max(book["id"] for book in books) + 1
-
-
-def build_product_from_row(row):
-    product_name = str(row.get("producto", "")).strip()
-    detail = str(row.get("detalle", "")).strip()
-
-    if not product_name or not detail:
-        return None
-
-    price = pd.to_numeric(row.get("precio"), errors="coerce")
-    cost = pd.to_numeric(row.get("costo"), errors="coerce")
-    stock = pd.to_numeric(row.get("stock"), errors="coerce")
-
-    if pd.isna(price) or pd.isna(cost) or pd.isna(stock):
-        return None
-
-    return {
-        "title": product_name,
-        "author": detail,
-        "price": float(price),
-        "cost": float(cost),
-        "stock": int(stock),
     }
 
 
@@ -313,7 +149,7 @@ def get_sale_time(sale):
 
 def normalize_sale(sale):
     quantity = sale.get("cantidad", sale.get("quantity", 1))
-    price_unit = sale.get("priceUnitario", sale.get("price", 0.0))
+    price_unit = sale.get("precioUnitario", sale.get("priceUnitario", sale.get("price", 0.0)))
     cost_unit = sale.get("costoUnitario", 0.0)
     total_sale = sale.get("totalVenta", price_unit * quantity)
     total_cost = sale.get("costoTotal", cost_unit * quantity)
@@ -330,6 +166,114 @@ def normalize_sale(sale):
         "ganancia": profit,
         "fecha": get_sale_date(sale),
         "hora": get_sale_time(sale),
+    }
+
+
+def migrate_from_sqlite_file(sqlite_file):
+    if not sqlite_file.exists():
+        return
+
+    connection = sqlite3.connect(sqlite_file)
+    connection.row_factory = sqlite3.Row
+
+    try:
+        tables = {
+            row["name"]
+            for row in connection.execute("SELECT name FROM sqlite_master WHERE type = 'table'").fetchall()
+        }
+
+        if not {"products", "sales"}.issubset(tables):
+            return
+
+        for row in connection.execute("SELECT id, title, author, price, cost, stock FROM products ORDER BY id"):
+            if db.session.get(Product, row["id"]) is not None:
+                continue
+
+            db.session.add(
+                Product(
+                    id=row["id"],
+                    title=row["title"],
+                    author=row["author"],
+                    price=row["price"],
+                    cost=row["cost"],
+                    stock=row["stock"],
+                )
+            )
+
+        for row in connection.execute(
+            """
+            SELECT
+                product_id, product_name, quantity, price_unit, cost_unit,
+                total_sale, total_cost, profit, sale_date, sale_time
+            FROM sales
+            ORDER BY id
+            """
+        ):
+            db.session.add(
+                Sale(
+                    product_id=row["product_id"],
+                    product_name=row["product_name"],
+                    quantity=row["quantity"],
+                    price_unit=row["price_unit"],
+                    cost_unit=row["cost_unit"],
+                    total_sale=row["total_sale"],
+                    total_cost=row["total_cost"],
+                    profit=row["profit"],
+                    sale_date=row["sale_date"],
+                    sale_time=row["sale_time"],
+                )
+            )
+
+        db.session.commit()
+    finally:
+        connection.close()
+
+
+def initialize_database():
+    db.create_all()
+
+    has_products = db.session.query(Product.id).first() is not None
+    has_sales = db.session.query(Sale.id).first() is not None
+
+    if has_products or has_sales:
+        return
+
+    migrate_from_sqlite_file(LEGACY_DATABASE_FILE)
+
+    if db.session.query(Product.id).first() is None and OLDER_DATABASE_FILE != LEGACY_DATABASE_FILE:
+        migrate_from_sqlite_file(OLDER_DATABASE_FILE)
+
+
+def load_books():
+    products = Product.query.order_by(Product.id).all()
+    return [product_to_dict(product) for product in products]
+
+
+def load_sales():
+    sales = Sale.query.order_by(Sale.id).all()
+    return [sale_to_dict(sale) for sale in sales]
+
+
+def build_product_from_row(row):
+    product_name = str(row.get("producto", "")).strip()
+    detail = str(row.get("detalle", "")).strip()
+
+    if not product_name or not detail:
+        return None
+
+    price = pd.to_numeric(row.get("precio"), errors="coerce")
+    cost = pd.to_numeric(row.get("costo"), errors="coerce")
+    stock = pd.to_numeric(row.get("stock"), errors="coerce")
+
+    if pd.isna(price) or pd.isna(cost) or pd.isna(stock):
+        return None
+
+    return {
+        "title": product_name,
+        "author": detail,
+        "price": float(price),
+        "cost": float(cost),
+        "stock": int(stock),
     }
 
 
@@ -487,22 +431,6 @@ def build_visual_summary(today_stats, sales, today):
     }
 
 
-def find_product_for_sale(products, sale):
-    normalized_sale = normalize_sale(sale)
-    product_id = normalized_sale["product_id"]
-
-    if product_id is not None:
-        for product in products:
-            if product["id"] == product_id:
-                return product
-
-    for product in products:
-        if product["title"] == normalized_sale["producto"]:
-            return product
-
-    return None
-
-
 @app.route("/")
 def index():
     products = load_books()
@@ -555,22 +483,18 @@ def add_book():
     backup_database()
 
     try:
-        with get_connection() as connection:
-            connection.execute(
-                """
-                INSERT INTO products (title, author, price, cost, stock)
-                VALUES (?, ?, ?, ?, ?)
-                """,
-                (
-                    request.form["title"].strip(),
-                    request.form["author"].strip(),
-                    float(request.form["price"]),
-                    float(request.form["cost"]),
-                    int(request.form["stock"]),
-                ),
+        db.session.add(
+            Product(
+                title=request.form["title"].strip(),
+                author=request.form["author"].strip(),
+                price=float(request.form["price"]),
+                cost=float(request.form["cost"]),
+                stock=int(request.form["stock"]),
             )
-    except (KeyError, ValueError, sqlite3.Error):
-        return redirect(url_for("index"))
+        )
+        db.session.commit()
+    except (KeyError, ValueError, SQLAlchemyError):
+        db.session.rollback()
 
     return redirect(url_for("index"))
 
@@ -594,26 +518,18 @@ def upload_excel():
 
     backup_database()
 
-    with get_connection() as connection:
+    try:
         for _, row in data_frame.iterrows():
             new_product = build_product_from_row(row)
 
             if new_product is None:
                 continue
 
-            connection.execute(
-                """
-                INSERT INTO products (title, author, price, cost, stock)
-                VALUES (?, ?, ?, ?, ?)
-                """,
-                (
-                    new_product["title"],
-                    new_product["author"],
-                    new_product["price"],
-                    new_product["cost"],
-                    new_product["stock"],
-                ),
-            )
+            db.session.add(Product(**new_product))
+
+        db.session.commit()
+    except SQLAlchemyError:
+        db.session.rollback()
 
     return redirect(url_for("index"))
 
@@ -623,13 +539,13 @@ def update_stock(book_id):
     backup_database()
 
     try:
-        with get_connection() as connection:
-            connection.execute(
-                "UPDATE products SET stock = ? WHERE id = ?",
-                (int(request.form["stock"]), book_id),
-            )
-    except (KeyError, ValueError, sqlite3.Error):
-        return redirect(url_for("index"))
+        product = db.session.get(Product, book_id)
+
+        if product is not None:
+            product.stock = int(request.form["stock"])
+            db.session.commit()
+    except (KeyError, ValueError, SQLAlchemyError):
+        db.session.rollback()
 
     return redirect(url_for("index"))
 
@@ -639,24 +555,17 @@ def update_product(book_id):
     backup_database()
 
     try:
-        with get_connection() as connection:
-            connection.execute(
-                """
-                UPDATE products
-                SET title = ?, author = ?, price = ?, cost = ?, stock = ?
-                WHERE id = ?
-                """,
-                (
-                    request.form["title"].strip(),
-                    request.form["author"].strip(),
-                    float(request.form["price"]),
-                    float(request.form["cost"]),
-                    int(request.form["stock"]),
-                    book_id,
-                ),
-            )
-    except (KeyError, ValueError, sqlite3.Error):
-        return redirect(url_for("index"))
+        product = db.session.get(Product, book_id)
+
+        if product is not None:
+            product.title = request.form["title"].strip()
+            product.author = request.form["author"].strip()
+            product.price = float(request.form["price"])
+            product.cost = float(request.form["cost"])
+            product.stock = int(request.form["stock"])
+            db.session.commit()
+    except (KeyError, ValueError, SQLAlchemyError):
+        db.session.rollback()
 
     return redirect(url_for("index"))
 
@@ -667,47 +576,34 @@ def sell_book(book_id):
     now = datetime.now()
 
     try:
-        with get_connection() as connection:
-            product = connection.execute(
-                "SELECT id, title, price, cost, stock FROM products WHERE id = ?",
-                (book_id,),
-            ).fetchone()
+        product = db.session.get(Product, book_id)
 
-            if product is None or product["stock"] <= 0:
-                return redirect(url_for("index"))
+        if product is None or product.stock <= 0:
+            return redirect(url_for("index"))
 
-            quantity = 1
-            total_sale = float(product["price"]) * quantity
-            total_cost = float(product["cost"]) * quantity
-            profit = total_sale - total_cost
+        quantity = 1
+        total_sale = float(product.price) * quantity
+        total_cost = float(product.cost) * quantity
+        profit = total_sale - total_cost
+        product.stock -= quantity
 
-            connection.execute(
-                "UPDATE products SET stock = stock - ? WHERE id = ?",
-                (quantity, book_id),
+        db.session.add(
+            Sale(
+                product_id=product.id,
+                product_name=product.title,
+                quantity=quantity,
+                price_unit=product.price,
+                cost_unit=product.cost,
+                total_sale=total_sale,
+                total_cost=total_cost,
+                profit=profit,
+                sale_date=now.strftime("%Y-%m-%d"),
+                sale_time=now.strftime("%H:%M:%S"),
             )
-            connection.execute(
-                """
-                INSERT INTO sales (
-                    product_id, product_name, quantity, price_unit, cost_unit,
-                    total_sale, total_cost, profit, sale_date, sale_time
-                )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """,
-                (
-                    product["id"],
-                    product["title"],
-                    quantity,
-                    product["price"],
-                    product["cost"],
-                    total_sale,
-                    total_cost,
-                    profit,
-                    now.strftime("%Y-%m-%d"),
-                    now.strftime("%H:%M:%S"),
-                ),
-            )
-    except sqlite3.Error:
-        return redirect(url_for("index"))
+        )
+        db.session.commit()
+    except SQLAlchemyError:
+        db.session.rollback()
 
     return redirect(url_for("index"))
 
@@ -717,39 +613,26 @@ def undo_last_sale():
     backup_database()
 
     try:
-        with get_connection() as connection:
-            last_sale = connection.execute(
-                """
-                SELECT id, product_id, product_name, quantity
-                FROM sales
-                ORDER BY id DESC
-                LIMIT 1
-                """
-            ).fetchone()
+        last_sale = Sale.query.order_by(Sale.id.desc()).first()
 
-            if last_sale is None:
-                return redirect(url_for("index"))
+        if last_sale is None:
+            return redirect(url_for("index"))
 
-            if last_sale["product_id"] is not None:
-                connection.execute(
-                    "UPDATE products SET stock = stock + ? WHERE id = ?",
-                    (last_sale["quantity"], last_sale["product_id"]),
-                )
-            else:
-                connection.execute(
-                    """
-                    UPDATE products
-                    SET stock = stock + ?
-                    WHERE id = (
-                        SELECT id FROM products WHERE title = ? ORDER BY id LIMIT 1
-                    )
-                    """,
-                    (last_sale["quantity"], last_sale["product_name"]),
-                )
+        product = None
 
-            connection.execute("DELETE FROM sales WHERE id = ?", (last_sale["id"],))
-    except sqlite3.Error:
-        return redirect(url_for("index"))
+        if last_sale.product_id is not None:
+            product = db.session.get(Product, last_sale.product_id)
+
+        if product is None:
+            product = Product.query.filter_by(title=last_sale.product_name).order_by(Product.id).first()
+
+        if product is not None:
+            product.stock += last_sale.quantity
+
+        db.session.delete(last_sale)
+        db.session.commit()
+    except SQLAlchemyError:
+        db.session.rollback()
 
     return redirect(url_for("index"))
 
@@ -759,13 +642,14 @@ def reset_data():
     backup_database()
 
     try:
-        with get_connection() as connection:
-            connection.execute("DELETE FROM sales")
+        Sale.query.delete()
 
-            if request.form.get("delete_products") == "yes":
-                connection.execute("DELETE FROM products")
-    except sqlite3.Error:
-        return redirect(url_for("index"))
+        if request.form.get("delete_products") == "yes":
+            Product.query.delete()
+
+        db.session.commit()
+    except SQLAlchemyError:
+        db.session.rollback()
 
     return redirect(url_for("index"))
 
@@ -775,16 +659,20 @@ def delete_product(book_id):
     backup_database()
 
     try:
-        with get_connection() as connection:
-            connection.execute("DELETE FROM products WHERE id = ?", (book_id,))
-    except sqlite3.Error:
-        return redirect(url_for("index"))
+        product = db.session.get(Product, book_id)
+
+        if product is not None:
+            db.session.delete(product)
+            db.session.commit()
+    except SQLAlchemyError:
+        db.session.rollback()
 
     return redirect(url_for("index"))
 
 
-initialize_database()
+with app.app_context():
+    initialize_database()
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(debug=True, use_reloader=False)
