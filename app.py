@@ -665,7 +665,7 @@ def reset_data():
 #    except SQLAlchemyError:
 #        db.session.rollback()
 
-#    return redirect(url_for("index"))
+    return redirect(url_for("index"))
 
 
 @app.route("/delete-product/<int:book_id>", methods=["POST"])
