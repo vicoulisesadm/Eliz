@@ -36,6 +36,7 @@ db = SQLAlchemy(app)
 LEGACY_DATABASE_FILE = Path("database.db")
 OLDER_DATABASE_FILE = Path("libreria_eliz.db")
 BACKUP_DIR = Path(os.environ.get("BACKUP_DIR", "backups"))
+database_initialized = False
 
 
 class Product(db.Model):
@@ -230,18 +231,31 @@ def migrate_from_sqlite_file(sqlite_file):
 
 
 def initialize_database():
+    global database_initialized
+
     db.create_all()
 
     has_products = db.session.query(Product.id).first() is not None
     has_sales = db.session.query(Sale.id).first() is not None
 
     if has_products or has_sales:
+        database_initialized = True
         return
 
     migrate_from_sqlite_file(LEGACY_DATABASE_FILE)
 
     if db.session.query(Product.id).first() is None and OLDER_DATABASE_FILE != LEGACY_DATABASE_FILE:
         migrate_from_sqlite_file(OLDER_DATABASE_FILE)
+
+    database_initialized = True
+
+
+@app.before_request
+def ensure_database_is_ready():
+    if database_initialized:
+        return
+
+    initialize_database()
 
 
 def load_books():
@@ -675,4 +689,7 @@ with app.app_context():
 
 
 if __name__ == "__main__":
+    with app.app_context():
+        db.create_all()
+
     app.run(debug=True, use_reloader=False)
