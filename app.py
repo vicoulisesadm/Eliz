@@ -651,8 +651,8 @@ def undo_last_sale():
     return redirect(url_for("index"))
 
 
-# @app.route("/reset-data", methods=["POST"])
-# def reset_data():
+@app.route("/reset-data", methods=["POST"])
+def reset_data():
 #   backup_database()
 
 #    try:
