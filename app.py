@@ -651,21 +651,21 @@ def undo_last_sale():
     return redirect(url_for("index"))
 
 
-@app.route("/reset-data", methods=["POST"])
-def reset_data():
-    backup_database()
+# @app.route("/reset-data", methods=["POST"])
+# def reset_data():
+#   backup_database()
 
-    try:
-        Sale.query.delete()
+#    try:
+#       Sale.query.delete()
+#
+#        if request.form.get("delete_products") == "yes":
+#            Product.query.delete()
 
-        if request.form.get("delete_products") == "yes":
-            Product.query.delete()
+#        db.session.commit()
+#    except SQLAlchemyError:
+#        db.session.rollback()
 
-        db.session.commit()
-    except SQLAlchemyError:
-        db.session.rollback()
-
-    return redirect(url_for("index"))
+#    return redirect(url_for("index"))
 
 
 @app.route("/delete-product/<int:book_id>", methods=["POST"])
