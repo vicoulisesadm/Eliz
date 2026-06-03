@@ -655,15 +655,15 @@ def undo_last_sale():
 def reset_data():
 #   backup_database()
 
-#    try:
-#       Sale.query.delete()
-#
-#        if request.form.get("delete_products") == "yes":
-#            Product.query.delete()
+    try:
+       Sale.query.delete()
 
-#        db.session.commit()
-#    except SQLAlchemyError:
-#        db.session.rollback()
+        if request.form.get("delete_products") == "yes":
+            Product.query.delete()
+
+        db.session.commit()
+    except SQLAlchemyError:
+        db.session.rollback()
 
     return redirect(url_for("index"))
 
