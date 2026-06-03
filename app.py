@@ -653,17 +653,13 @@ def undo_last_sale():
 
 @app.route("/reset-data", methods=["POST"])
 def reset_data():
-
     try:
-       Sale.query.delete()
-
+        Sale.query.delete()
         if request.form.get("delete_products") == "yes":
             Product.query.delete()
-
         db.session.commit()
-    except SQLAlchemyError:
+    except Exception:
         db.session.rollback()
-
     return redirect(url_for("index"))
 
 
