@@ -653,7 +653,6 @@ def undo_last_sale():
 
 @app.route("/reset-data", methods=["POST"])
 def reset_data():
-#   backup_database()
 
     try:
        Sale.query.delete()
