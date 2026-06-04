@@ -185,7 +185,8 @@
         .reset-form,
         .filters,
         .inline-actions,
-        .edit-actions {
+        .edit-actions,
+        .sale-form {
             display: flex;
             gap: 10px;
             align-items: center;
@@ -212,6 +213,16 @@
 
         .stock-filter {
             width: 170px;
+        }
+
+        .sale-form {
+            flex-wrap: nowrap;
+        }
+
+        .sale-quantity {
+            width: 74px;
+            min-width: 74px;
+            text-align: center;
         }
 
         .reset-form label {
@@ -617,7 +628,18 @@
                                         </div>
                                     </td>
                                     <td>
-                                        <form action="{{ url_for('sell_book', book_id=product.id) }}" method="post">
+                                        <form action="{{ url_for('sell_book', book_id=product.id) }}" method="post" class="sale-form">
+                                            <input
+                                                type="number"
+                                                name="quantity"
+                                                value="1"
+                                                min="1"
+                                                max="{{ product.stock }}"
+                                                class="sale-quantity"
+                                                aria-label="Cantidad vendida de {{ product.title }}"
+                                                {% if product.stock == 0 %}disabled{% endif %}
+                                                required
+                                            >
                                             <button type="submit" class="button button-success" {% if product.stock == 0 %}disabled{% endif %}>Vendido</button>
                                         </form>
                                     </td>
@@ -653,18 +675,18 @@
                                     <th>Hora</th>
                                     <th>Producto</th>
                                     <th>Cantidad</th>
-                                    <th>Precio</th>
-                                    <th>Ganancia</th>
+                                    <th>Precio Total</th>
+                                    <th>Ganancia Total</th>
                                 </tr>
                             </thead>
                             <tbody id="sales-table-body">
                                 {% for sale in sales %}
-                                    <tr data-sale-product="{{ sale.producto|lower }}">
-                                        <td>{{ sale.fecha }}</td>
-                                        <td>{{ sale.hora }}</td>
-                                        <td>{{ sale.producto }}</td>
+                                    <tr data-sale-product="{{ sale.product_name|lower }}">
+                                        <td>{{ sale.sale_date }}</td>
+                                        <td>{{ sale.sale_time }}</td>
+                                        <td>{{ sale.product_name }}</td>
                                         <td>{{ sale.cantidad }}</td>
-                                        <td>${{ "%.2f"|format(sale.precioUnitario) }}</td>
+                                        <td>${{ "%.2f"|format(sale.totalVenta) }}</td>
                                         <td>${{ "%.2f"|format(sale.ganancia) }}</td>
                                     </tr>
                                 {% endfor %}

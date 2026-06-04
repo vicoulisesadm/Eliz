@@ -102,6 +102,7 @@ def sale_to_dict(sale):
     return {
         "id": sale.id,
         "product_id": sale.product_id,
+        "product_name": sale.product_name,
         "producto": sale.product_name,
         "cantidad": sale.quantity,
         "precioUnitario": float(sale.price_unit),
@@ -109,7 +110,9 @@ def sale_to_dict(sale):
         "totalVenta": float(sale.total_sale),
         "costoTotal": float(sale.total_cost),
         "ganancia": float(sale.profit),
+        "sale_date": sale.sale_date,
         "fecha": sale.sale_date,
+        "sale_time": sale.sale_time,
         "hora": sale.sale_time,
     }
 
@@ -155,18 +158,24 @@ def normalize_sale(sale):
     total_sale = sale.get("totalVenta", price_unit * quantity)
     total_cost = sale.get("costoTotal", cost_unit * quantity)
     profit = sale.get("ganancia", total_sale - total_cost)
+    product_name = sale.get("product_name", sale.get("producto", sale.get("product", "")))
+    sale_date = get_sale_date(sale)
+    sale_time = get_sale_time(sale)
 
     return {
         "product_id": sale.get("product_id"),
-        "producto": sale.get("producto", sale.get("product", "")),
+        "product_name": product_name,
+        "producto": product_name,
         "cantidad": quantity,
         "precioUnitario": price_unit,
         "costoUnitario": cost_unit,
         "totalVenta": total_sale,
         "costoTotal": total_cost,
         "ganancia": profit,
-        "fecha": get_sale_date(sale),
-        "hora": get_sale_time(sale),
+        "sale_date": sale_date,
+        "fecha": sale_date,
+        "sale_time": sale_time,
+        "hora": sale_time,
     }
 
 
@@ -259,7 +268,7 @@ def ensure_database_is_ready():
 
 
 def load_books():
-    products = Product.query.order_by(Product.id).all()
+    products = Product.query.order_by(func.lower(Product.title), Product.id).all()
     return [product_to_dict(product) for product in products]
 
 
@@ -586,16 +595,15 @@ def update_product(book_id):
 
 @app.route("/sell/<int:book_id>", methods=["POST"])
 def sell_book(book_id):
-    backup_database()
     now = datetime.now()
 
     try:
         product = db.session.get(Product, book_id)
+        quantity = int(request.form.get("quantity", 1))
 
-        if product is None or product.stock <= 0:
+        if product is None or quantity <= 0 or product.stock < quantity:
             return redirect(url_for("index"))
 
-        quantity = 1
         total_sale = float(product.price) * quantity
         total_cost = float(product.cost) * quantity
         profit = total_sale - total_cost
@@ -616,7 +624,7 @@ def sell_book(book_id):
             )
         )
         db.session.commit()
-    except SQLAlchemyError:
+    except Exception:
         db.session.rollback()
 
     return redirect(url_for("index"))
